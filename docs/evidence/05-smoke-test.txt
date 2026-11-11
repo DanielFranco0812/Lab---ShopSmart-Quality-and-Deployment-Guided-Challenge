@@ -1,0 +1,22 @@
+Smoke test run: 2026-11-11 21:32 +08 (local release candidate, sandbox replica)
+Before: orders=5 products=6 order ids=
+health: {"status":"ok"} 200
+products: 6 items
+{"cards": 6, "case": "browse"}
+{"items": [{"name": "Wireless Mouse", "qty": "2", "line": "₱1,300"}, {"name": "1080p Webcam", "qty": "1", "line": "₱1,450"}], "total": "₱2,750", "header": "Cart (3)", "case": "cart add webcam"}
+{"items": [{"name": "Wireless Mouse", "qty": "2", "line": "₱1,300"}], "total": "₱1,300", "header": "Cart (2)", "case": "cart remove webcam"}
+{"confirmation": "ORDER RECEIVED |  | Thank you, Maria Test Santos! |  | Your simulated order number is #6. |  | Total: ₱1,200.00 |  | Continue shopping", "cartHeader": "Cart (0)", "case": "checkout valid"}
+{"answer": "The best match in the current ShopSmart catalog is Compact Mechanical Keyboard (₱1,850.00, 8 in stock).", "notice": ["AI drafting is not configured, so this answer was built directly from catalog rules."], "links": [
+{"answer": "I could not find an in-stock ShopSmart product matching that request. Try a different product type or budget, or browse the full catalog.", "notice": [], "links": [], "sources": [], "case": "assistant no match"}
+After: orders=7 products=6 order ids=
+ id |   customerName    |  total  |        createdAt        
+----+-------------------+---------+-------------------------
+  1 | Juan Dela Cruz    | 1300.00 | 2026-11-11 13:18:58.544
+  2 | Maria Test Santos | 1200.00 | 2026-11-11 13:20:08.83
+  3 | Other Test Buyer  | 2900.00 | 2026-11-11 13:20:09.476
+  4 | Maria Test Santos | 1200.00 | 2026-11-11 13:30:16.844
+  5 | Other Test Buyer  | 2900.00 | 2026-11-11 13:30:17.48
+  6 | Maria Test Santos | 1200.00 | 2026-11-11 13:33:00.684
+  7 | Other Test Buyer  | 2900.00 | 2026-11-11 13:33:01.286
+(7 rows)
+

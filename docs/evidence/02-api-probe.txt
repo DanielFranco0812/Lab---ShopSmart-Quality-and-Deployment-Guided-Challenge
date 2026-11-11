@@ -1,0 +1,50 @@
+## search keyboard
+['Compact Mechanical Keyboard']
+## search zzz
+{"products":[]}
+## search %
+6
+## search _
+6
+## product abc
+{"error":{"code":"INVALID_PRODUCT_ID","message":"Product ID must be a positive integer."}} 400
+## product 999
+{"error":{"code":"PRODUCT_NOT_FOUND","message":"Product could not be found."}} 404
+## orders before:
+0
+1|12 2|8 3|10 4|6 5|9 6|7 
+## valid order (tampered price ignored)
+{"id":1,"customerName":"Juan Dela Cruz","email":"juan.test@example.com","address":"123 Sample St, Test City","status":"PENDING","total":1300,"createdAt":"2026-11-11T13:18:58.544Z","items":[{"id":1,"orderId":1,"productId":1,"quantity":2,"unitPrice":650}]} 201
+## bad email
+{"error":{"code":"INVALID_ORDER","message":"Check the customer and cart information.","details":{"formErrors":[],"fieldErrors":{"email":["Invalid email address"]}}}} 422
+## short address + empty items
+{"error":{"code":"INVALID_ORDER","message":"Check the customer and cart information.","details":{"formErrors":[],"fieldErrors":{"customerName":["Too small: expected string to have >=2 characters"],"ad
+## over stock (webcam id4 stock 6, qty 7)
+{"error":{"code":"INSUFFICIENT_STOCK","message":"Only 6 unit(s) of 1080p Webcam are available."}} 409
+## unknown product
+{"error":{"code":"PRODUCT_UNAVAILABLE","message":"One or more products are unavailable."}} 422
+## fractional qty
+422
+## malformed JSON
+{"error":{"code":"INTERNAL_ERROR","message":"Unexpected token 'o', ...\"merName\": oops\" is not valid JSON"}} 400
+## orders after:
+1
+1|10 2|8 3|10 4|6 5|9 6|7 
+## GET /orders (no listing route)
+{"error":{"code":"ROUTE_NOT_FOUND","message":"API route could not be found."}} 404
+## GET /orders/1
+{"error":{"code":"ROUTE_NOT_FOUND","message":"API route could not be found."}} 404
+## assistant keyboard
+{"answer":"The best match in the current ShopSmart catalog is Compact Mechanical Keyboard (₱1,850.00, 8 in stock).","recommendedProducts":[{"id":2,"name":"Compact Mechanical Keyboard","price":1850,"category":"Accessories","stock":8}],"sources":[{"type":"product","id":2,"name":"Compact Mechanical Keyboard","price":1850,"stock":8}],"mode":"rules","notice":"AI drafting is not configured, so this answer was built directly from catalog rules."}
+## assistant shoes
+{"answer":"I could not find an in-stock ShopSmart product matching that request. Try a different product type or budget, or browse the full catalog.","recommendedProducts":[],"sources":[],"mode":"no_match"}
+## assistant hi
+{"error":{"code":"INVALID_QUESTION","message":"Question must contain between 3 and 300 characters."}} 422
+## assistant earphones
+{"answer":"I could not find an in-stock ShopSmart product matching that request. Try a different product type or budget, or browse the full catalog.","recommendedProducts":[],"sources":[],"mode":"no_match"}
+## assistant budget only
+{"answer":"Matching in-stock products in the current ShopSmart catalog: Wireless Mouse (₱650.00, 10 in stock); USB-C Study Lamp (₱900.00, 10 in stock).","recommendedProducts":[{"id":1,"name":"Wireless Mouse","price":650,"category":"Accessories","stock":10},{"id":3,"name":"USB-C Study Lamp","price":900,"category":"Study","stock":10}],"sources":[{"type":"product","id":1,"name":"Wireless Mouse","price":650,"stock":10},{"type":"product","id":3,"name":"USB-C Study Lamp","price":900,"stock":10}],"mode":"rules","notice":"AI drafting is not configured, so this answer was built directly from catalog rules."}
+## assistant non-string
+{"error":{"code":"INVALID_QUESTION","message":"Question must contain between 3 and 300 characters."}} 422
+## CORS from other origin
+Access-Control-Allow-Origin: http://localhost:5173

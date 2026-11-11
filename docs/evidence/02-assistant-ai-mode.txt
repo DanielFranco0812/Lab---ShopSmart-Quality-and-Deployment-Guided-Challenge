@@ -1,0 +1,5 @@
+## fake Gemini returns good draft
+{"answer":"The Compact Mechanical Keyboard costs ₱1,850.00 and has 8 units in stock.","recommendedProducts":[{"id":2,"name":"Compact Mechanical Keyboard","price":1850,"category":"Accessories","stock":8}],"sources":[{"type":"product","id":2,"name":"Compact Mechanical Keyboard","price":1850,"stock":8}],"mode":"ai"}
+## fake Gemini returns invented draft
+{"answer":"The best match in the current ShopSmart catalog is Compact Mechanical Keyboard (₱1,850.00, 8 in stock).","recommendedProducts":[{"id":2,"name":"Compact Mechanical Keyboard","price":1850,"category":"Accessories","stock":8}],"sources":[{"type":"product","id":2,"name":"Compact Mechanical Keyboard","price":1850,"stock":8}],"mode":"rules","notice":"The AI draft included details we could not verify, so this answer was built directly from catalog rules."}
+[3e47222e-6ab8-455e-b3c5-48d957504ef9] assistant draft rejected: unknown_product_id

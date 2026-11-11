@@ -1,0 +1,31 @@
+{"cards": 6, "case": "browse"}
+{"results": ["Compact Mechanical Keyboard"], "case": "search keyboard"}
+{"cards": 0, "message": ["No products match your filters."], "case": "search no results"}
+{"cards": 0, "case": "search \"%\""}
+{"items": [{"name": "Wireless Mouse", "qty": "2", "line": "₱1,300"}], "total": "₱1,300", "header": "Cart (2)", "case": "cart add mouse x2"}
+{"items": [{"name": "Wireless Mouse", "qty": "2", "line": "₱1,300"}, {"name": "1080p Webcam", "qty": "1", "line": "₱1,450"}], "total": "₱2,750", "header": "Cart (3)", "case": "cart add webcam"}
+{"items": [{"name": "Wireless Mouse", "qty": "3", "line": "₱1,950"}, {"name": "1080p Webcam", "qty": "1", "line": "₱1,450"}], "total": "₱3,400", "header": "Cart (4)", "case": "cart set mouse qty 3"}
+{"items": [{"name": "Wireless Mouse", "qty": "2", "line": "₱1,300"}, {"name": "1080p Webcam", "qty": "1", "line": "₱1,450"}], "total": "₱2,750", "header": "Cart (3)", "case": "cart minus mouse"}
+{"items": [{"name": "Wireless Mouse", "qty": "2", "line": "₱1,300"}, {"name": "1080p Webcam", "qty": "1", "line": "₱1,450"}], "total": "₱2,750", "header": "Cart (3)", "message": ["Only 6 unit(s) are available."], "case": "cart webcam qty 7 > stock 6"}
+{"items": [{"name": "Wireless Mouse", "qty": "2", "line": "₱1,300"}], "total": "₱1,300", "header": "Cart (2)", "case": "cart remove webcam"}
+{"items": [{"name": "Wireless Mouse", "qty": "2", "line": "₱1,300"}, {"name": "USB Headset", "qty": "1", "line": "₱1,350"}], "total": "₱2,650", "header": "Cart (3)", "case": "cart before refresh"}
+{"items": [], "total": null, "header": "Cart (0)", "case": "cart after browser refresh"}
+{"stillOnForm": true, "validationMessage": "Please include an '@' in the email address. 'jehdfranco.com' is missing an '@'.", "case": "checkout invalid email (browser)"}
+{"confirmation": "ORDER RECEIVED |  | Thank you, Daniel Jehd! |  | Your simulated order number is #8. |  | Total: ₱1,200.00 |  | Continue shopping", "cartHeader": "Cart (0)", "case": "checkout valid"}
+{"message": "Only 6 unit(s) of 1080p Webcam are available.", "items": [{"name": "1080p Webcam", "qty": "6", "line": "₱8,700"}], "total": "₱8,700", "header": "Cart (6)", "case": "stock add webcam 7 clicks (stock 6)"}
+{"status": 201, "case": "stock: another customer bought 2 webcams"}
+{"error": "Only 4 unit(s) of 1080p Webcam are available.", "items": [{"name": "1080p Webcam", "qty": "6", "line": "₱8,700"}], "total": "₱8,700", "header": "Cart (6)", "case": "stock: checkout with stale cart"}
+{"answer": "The best match in the current ShopSmart catalog is Compact Mechanical Keyboard (₱1,850.00, 8 in stock).", "notice": ["AI drafting is not configured, so this answer was built directly from catalog rules."], "links": ["Compact Mechanical Keyboard — ₱1,850.00 · 8 in stock"], "sources": ["Product #2: Compact Mechanical Keyboard — ₱1,850.00"], "case": "assistant keyboard"}
+{"answer": "I could not find an in-stock ShopSmart product matching that request. Try a different product type or budget, or browse the full catalog.", "notice": [], "links": [], "sources": [], "case": "assistant no match"}
+{"url": "http://localhost:5173/products/2", "title": "Compact Mechanical Keyboard", "stock": "8 unit(s) available", "case": "assistant link opens product"}
+{"message": "Product could not be found.", "case": "product 999 page"}
+{"case": "checkout while API hangs", "error": "The server took too long to confirm your order. It may still have been placed, so please wait a moment before trying again.", "seconds": 15.4, "button": "Place simulated order"}
+{'case': 'checkout short address (API 422)', 'error': 'Check the customer and cart information.'}
+## orders before: 9
+## API bad email (igortoledano.com)
+{"error":{"code":"INVALID_ORDER","message":"Check the customer and cart information.","details":{"formErrors":[],"fieldErrors":{"email":["Invalid email address"]}}}} 422
+## API short address (Anao)
+{"error":{"code":"INVALID_ORDER","message":"Check the customer and cart information.","details":{"formErrors":[],"fieldErrors":{"address":["Too small: expected string to have >=10 characters"]}}}} 422
+## API over stock (headset qty 20)
+{"error":{"code":"INSUFFICIENT_STOCK","message":"Only 7 unit(s) of USB Headset are available."}} 409
+## orders after: 9

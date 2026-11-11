@@ -1,0 +1,10 @@
+{"case": "api-down", "products_page": ["ShopSmart could not reach the server. Check that the API is running and try again. Make sure the backend is running.", "Could not load category options: ShopSmart could not reach the server. Check that the API is running and try again."], "seconds": 0.3, "assistant": {"error": ["ShopSmart could not reach the server. Check that the API is running and try again."], "notice": [], "answer": [], "button": "Ask ShopSmart", "seconds": 0.1}}
+{"case": "api-hangs", "products_page": ["Loading products…"], "seconds": ">20.0 (still loading)", "assistant": {"error": ["The request took too long. Please try again."], "notice": [], "answer": [], "button": "Ask ShopSmart", "seconds": 35.1}}
+{"case": "ai-unreachable", "products_page": [], "seconds": 0.5, "assistant": {"error": [], "notice": ["The AI service is unavailable, so this answer was built directly from catalog rules."], "answer": ["The best match in the current ShopSmart catalog is Compact Mechanical Keyboard (₱1,850.00, 8 in stock)."], "button": "Ask ShopSmart", "seconds": 0.2}}
+{"case": "ai-timeout", "products_page": [], "seconds": 0.5, "assistant": {"error": [], "notice": ["The AI service took too long, so this answer was built directly from catalog rules."], "answer": ["The best match in the current ShopSmart catalog is Compact Mechanical Keyboard (₱1,850.00, 8 in stock)."], "button": "Ask ShopSmart", "seconds": 3.4}}
+{"case": "checkout while API hangs", "seconds": ">30.0", "still": true, "button": "Submitting order\u2026"}
+## DB down: health
+{"status":"ok"} 200 0.010804s
+## DB down: products
+{"error":{"code":"P1001","message":"The server could not complete the request.","traceId":"fb265371-40a6-48af-9e1f-241c065c2947"}} 500 0.070730s
+{"case": "db-down", "products_page": ["The server could not complete the request. Make sure the backend is running.", "Could not load category options: The server could not complete the request."], "seconds": 0.3, "assistant": {"error": ["The server could not complete the request."], "notice": [], "answer": [], "button": "Ask ShopSmart", "seconds": 0.1}}

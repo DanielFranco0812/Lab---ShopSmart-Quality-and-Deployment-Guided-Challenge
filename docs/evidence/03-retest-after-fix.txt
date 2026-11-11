@@ -1,0 +1,28 @@
+orders before retest: 3
+{"case": "fixed-api-hangs", "products_page": ["The request took too long. Please try again. Make sure the backend is running.", "Could not load category options: The request took too long. Please try again."], "seconds": 15.7, "assistant": {"error": ["The request took too long. Please try again."], "notice": [], "answer": [], "button": "Ask ShopSmart", "seconds": 35.6}}
+{"case": "checkout while API hangs", "error": "The server took too long to confirm your order. It may still have been placed, so please wait a moment before trying again.", "seconds": 15.4, "button": "Place simulated order"}
+orders after hang tests: 3
+## health (db up)
+{"status":"ok"} 200
+## health (db down)
+{"status":"error","database":"unreachable"} 503
+## products (db down)
+{"error":{"code":"INTERNAL_ERROR","message":"The server could not complete the request.","traceId":"5407abc5-9977-4dab-8cf5-f75ee1271143"}} 500
+## health (db back)
+{"status":"ok"} 200
+## malformed JSON
+{"error":{"code":"INVALID_JSON","message":"Request body must be valid JSON."}} 400
+## stock rule still 409
+{"error":{"code":"INSUFFICIENT_STOCK","message":"Only 4 unit(s) of 1080p Webcam are available."}} 409
+## validation still 422
+422
+## search %
+{"products":[]}
+## search _
+{"products":[]}
+## search keyboard
+['Compact Mechanical Keyboard']
+## search USB-C
+['USB-C Study Lamp']
+## search usb
+['Wireless Mouse', 'USB-C Study Lamp', 'USB Headset']

@@ -1,0 +1,369 @@
+diff --git a/README.md b/README.md
+index 7eac8fc..6395a72 100644
+--- a/README.md
++++ b/README.md
+@@ -138,6 +138,8 @@ NODE_ENV=development
+ 
+ If the class uses a different database password or port, update only the matching part of `DATABASE_URL`.
+ 
++The copied file also contains optional AI settings (`AI_PROVIDER`, `GEMINI_API_KEY`, `GEMINI_MODEL`, `AI_TIMEOUT_MS`, `GEMINI_THINKING_LEVEL`). Leave `GEMINI_API_KEY` empty to use the rule-based assistant. To use Gemini, paste your own key after `GEMINI_API_KEY=` in `backend/.env` only, then run `node backend/scripts/checkGemini.js` to test it. Never put the key in `frontend/.env` or any `VITE_` variable: Vite copies those into the public browser bundle.
++
+ Never upload `.env` files or paste their contents into a public repository or AI service.
+ 
+ ### 4. Install all project dependencies
+@@ -227,6 +229,8 @@ Keep this terminal open. It runs both applications:
+ {"status":"ok"}
+ ```
+ 
++If the browser instead shows `{"status":"error","database":"unreachable"}` (HTTP 503), the API is running but cannot reach PostgreSQL. Start PostgreSQL and check `DATABASE_URL` in `backend/.env`.
++
+ 4. Visit http://localhost:3000/api/products.
+ 5. Confirm that the response contains six products.
+ 
+@@ -304,7 +308,11 @@ Stop the previous ShopSmart process with `Ctrl+C`. Do not change ports unless th
+ 
+ ### Products do not appear
+ 
+-Verify http://localhost:3000/api/health, then run `npm run db:seed` and restart `npm run dev`.
++Verify http://localhost:3000/api/health. A 503 `database: unreachable` means PostgreSQL is stopped or `DATABASE_URL` is wrong. If health is ok but there are no products, run `npm run db:seed` and restart `npm run dev`. Seeding deletes existing orders.
++
++### "The request took too long. Please try again."
++
++The front end waits up to 15 seconds for the API (35 seconds for the assistant), then stops loading and shows this message. Check the terminal running `npm run dev` for API errors and try again. If it appears at checkout, the order may still have been saved, so do not resubmit immediately.
+ 
+ ### The browser reports a CORS error
+ 
+@@ -322,4 +330,13 @@ Confirm that the front end uses http://localhost:5173 and that `FRONTEND_URL=htt
+ | `npm run db:seed` | Reset and insert sample data |
+ | `npm run db:studio` | Open the Prisma database viewer |
+ 
++`npm run db:migrate` (Prisma `migrate dev`) is for local development only. A hosted database uses `npx prisma migrate deploy --schema backend/prisma/schema.prisma`; see `docs/DEPLOYMENT_PLAN.md`.
++
+ Read `docs/TEACHING_ROADMAP.md` for the weekly improvement plan.
++
++## Release documents (Week 6 quality and deployment challenge)
++
++- `docs/RELEASE_NOTE.md`: what works, known limitations, deployment status, team record
++- `docs/RELEASE_TEST_RECORD.md`: baseline, customer-journey and failure tests, defects, fixes, smoke test, secrets check
++- `docs/DEPLOYMENT_PLAN.md` and `docs/deployment-diagram.png`: staging architecture and configuration
++- `docs/screenshots/release/` and `docs/evidence/`: screenshots and logs referenced by the test record
+diff --git a/backend/src/app.js b/backend/src/app.js
+index 0507569..c4b7883 100644
+--- a/backend/src/app.js
++++ b/backend/src/app.js
+@@ -3,27 +3,49 @@ import cors from 'cors';
+ import express from 'express';
+ import helmet from 'helmet';
+ import morgan from 'morgan';
++import { prisma } from './lib/prisma.js';
+ import productsRouter from './routes/products.js';
+ import ordersRouter from './routes/orders.js';
+ import assistantRouter from './routes/assistant.js';
+ 
+-export function createApp() {
++const checkDatabaseConnection = () => prisma.$queryRaw`SELECT 1`;
++
++export function createApp({ checkDatabase = checkDatabaseConnection } = {}) {
+   const app = express();
+   app.disable('x-powered-by');
+   app.use(helmet());
+   app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }));
+-  app.use(express.json({ limit: '100kb' }));
++  // Request id first, so even a malformed-JSON error carries a traceId.
+   app.use((request, response, next) => { request.id = crypto.randomUUID(); response.setHeader('X-Request-ID', request.id); next(); });
++  app.use(express.json({ limit: '100kb' }));
+   app.use(morgan(':method :url :status :response-time ms'));
+ 
+-  app.get('/api/health', (_request, response) => response.json({ status: 'ok' }));
++  // DEF-2 fix: health only reports ok when PostgreSQL answers, so a deployment check cannot pass with a dead database.
++  app.get('/api/health', async (request, response) => {
++    try {
++      await checkDatabase();
++      response.json({ status: 'ok' });
++    } catch (error) {
++      console.error(`[${request.id}] health check: database unreachable`, error?.code || '');
++      response.status(503).json({ status: 'error', database: 'unreachable' });
++    }
++  });
+   app.use('/api/products', productsRouter);
+   app.use('/api/orders', ordersRouter);
+   app.use('/api/assistant', assistantRouter);
+   app.use((_request, response) => response.status(404).json({ error: { code: 'ROUTE_NOT_FOUND', message: 'API route could not be found.' } }));
++  // DEF-3 fix: malformed JSON gets its own 400 code, and unexpected errors never expose internal codes such as Prisma's P1001.
+   app.use((error, request, response, _next) => {
++    if (error?.type === 'entity.parse.failed') {
++      return response.status(400).json({ error: { code: 'INVALID_JSON', message: 'Request body must be valid JSON.', traceId: request.id } });
++    }
+     console.error(`[${request.id}]`, error);
+-    response.status(error.status || 500).json({ error: { code: error.code || 'INTERNAL_ERROR', message: error.status ? error.message : 'The server could not complete the request.', traceId: request.id } });
++    const expected = Number.isInteger(error?.status) && error.status < 500;
++    response.status(expected ? error.status : 500).json({ error: {
++      code: expected ? (error.code || 'REQUEST_ERROR') : 'INTERNAL_ERROR',
++      message: expected ? error.message : 'The server could not complete the request.',
++      traceId: request.id
++    } });
+   });
+   return app;
+ }
+diff --git a/backend/src/routes/products.js b/backend/src/routes/products.js
+index 3c713c8..93cfc6b 100644
+--- a/backend/src/routes/products.js
++++ b/backend/src/routes/products.js
+@@ -1,10 +1,11 @@
+ import { Router } from 'express';
+ import { prisma } from '../lib/prisma.js';
++import { escapeLikePattern } from '../lib/search.js';
+ const router = Router();
+ 
+ router.get('/', async (request, response, next) => {
+   try {
+-    const search = String(request.query.search || '').trim();
++    const search = escapeLikePattern(String(request.query.search || '').trim());
+     const products = await prisma.product.findMany({
+       where: {
+         active: true,
+diff --git a/docs/API_EXAMPLES.md b/docs/API_EXAMPLES.md
+index ee1da1a..6d9463f 100644
+--- a/docs/API_EXAMPLES.md
++++ b/docs/API_EXAMPLES.md
+@@ -8,6 +8,18 @@ Start the application with `npm run dev`, then send these requests through Bruno
+ GET http://localhost:3000/api/health
+ ```
+ 
++Returns `200 {"status":"ok"}` when the API can query PostgreSQL. Returns `503 {"status":"error","database":"unreachable"}` when it cannot.
++
++## Error responses
++
++| Situation | Status | `error.code` |
++| --- | --- | --- |
++| Body is not valid JSON | 400 | `INVALID_JSON` |
++| Order fails validation | 422 | `INVALID_ORDER` |
++| Product missing or inactive | 422 | `PRODUCT_UNAVAILABLE` |
++| Quantity above stock | 409 | `INSUFFICIENT_STOCK` |
++| Unexpected server fault (database down, etc.) | 500 | `INTERNAL_ERROR` (generic message, `traceId` matches the `X-Request-ID` header and the server log) |
++
+ ## Product list
+ 
+ ```http
+diff --git a/frontend/src/services/api.js b/frontend/src/services/api.js
+index 779be55..4ca0f9a 100644
+--- a/frontend/src/services/api.js
++++ b/frontend/src/services/api.js
+@@ -1,14 +1,24 @@
+ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+ 
+-async function request(path, options = {}) {
++// DEF-1 fix: every request ends. Without a timeout, a frozen or cold-starting API
++// left product pages on "Loading…" and checkout on "Submitting order…" forever.
++export const REQUEST_TIMEOUT_MS = 15000;
++const DEFAULT_TIMEOUT_MESSAGE = 'The request took too long. Please try again.';
++
++export async function request(path, options = {}, { timeoutMs = REQUEST_TIMEOUT_MS, timeoutMessage = DEFAULT_TIMEOUT_MESSAGE } = {}) {
+   let response;
+   try {
+     response = await fetch(`${API_URL}${path}`, {
+       ...options,
++      signal: options.signal ?? AbortSignal.timeout(timeoutMs),
+       headers: { 'Content-Type': 'application/json', ...options.headers }
+     });
+   } catch (caught) {
+-    if (caught?.name === 'TimeoutError' || caught?.name === 'AbortError') throw new Error('The request took too long. Please try again.');
++    if (caught?.name === 'TimeoutError' || caught?.name === 'AbortError') {
++      const error = new Error(timeoutMessage);
++      error.code = 'TIMEOUT';
++      throw error;
++    }
+     throw new Error('ShopSmart could not reach the server. Check that the API is running and try again.');
+   }
+ 
+@@ -26,8 +36,9 @@ async function request(path, options = {}) {
+ export const api = {
+   getProducts: (query = '') => request(`/products${query ? `?search=${encodeURIComponent(query)}` : ''}`),
+   getProduct: (id) => request(`/products/${id}`),
+-  createOrder: (order) => request('/orders', { method: 'POST', body: JSON.stringify(order) }),
+-  askAssistant: (question) => request('/assistant/questions', {
+-    method: 'POST', body: JSON.stringify({ question }), signal: AbortSignal.timeout(35000)
+-  })
++  // A timed-out order may still have been saved, so the message tells the customer not to resubmit blindly.
++  createOrder: (order) => request('/orders', { method: 'POST', body: JSON.stringify(order) }, {
++    timeoutMessage: 'The server took too long to confirm your order. It may still have been placed, so please wait a moment before trying again.'
++  }),
++  askAssistant: (question) => request('/assistant/questions', { method: 'POST', body: JSON.stringify({ question }) }, { timeoutMs: 35000 })
+ };
+diff --git a/package-lock.json b/package-lock.json
+index d1c1835..eb0b309 100644
+--- a/package-lock.json
++++ b/package-lock.json
+@@ -1781,18 +1781,18 @@
+       }
+     },
+     "node_modules/body-parser": {
+-      "version": "2.3.0",
+-      "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.3.0.tgz",
+-      "integrity": "sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==",
++      "version": "2.4.0",
++      "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-2.4.0.tgz",
++      "integrity": "sha512-Ifk1KcLrxaGt1occQagQNFNNOqRt1LFuehEnHHzB8Z6cRgIxRU1TBaiIsUiCdA+gy5PL7Y1IX31DNKkRmxtXjQ==",
+       "license": "MIT",
+       "dependencies": {
+         "bytes": "^3.1.2",
+-        "content-type": "^2.0.0",
++        "content-type": "^2.1.0",
+         "debug": "^4.4.3",
+         "http-errors": "^2.0.1",
+-        "iconv-lite": "^0.7.2",
++        "iconv-lite": "^0.7.3",
+         "on-finished": "^2.4.1",
+-        "qs": "^6.15.2",
++        "qs": "^6.16.1",
+         "raw-body": "^3.0.2",
+         "type-is": "^2.1.0"
+       },
+@@ -1818,9 +1818,9 @@
+       }
+     },
+     "node_modules/brace-expansion": {
+-      "version": "1.1.18",
+-      "resolved": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.18.tgz",
+-      "integrity": "sha512-Edep/X9fGqVNmzKBVsDYIOtD+z1tuezV70LBjdCst9Tqu76lsnvRiZ6oTic1n+/BIwX6QDGAO94PN4N2SADvtw==",
++      "version": "1.1.22",
++      "resolved": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-1.1.22.tgz",
++      "integrity": "sha512-CKLDTuSsN0+r1ThM0WkzzBI7dnPI6xEGfa/JnVYIK9JNBA1N1NyPwXVHor//NKD/y3sDxp764sZdLhFK7pH8XQ==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+@@ -2107,15 +2107,15 @@
+       "license": "MIT"
+     },
+     "node_modules/concurrently": {
+-      "version": "9.2.4",
+-      "resolved": "https://registry.npmjs.org/concurrently/-/concurrently-9.2.4.tgz",
+-      "integrity": "sha512-TZ0CEhyzvFjgtAvHTusDMgj7wNdihCh7LLLrzdUOXIhdlnL2JBBGA9eJxR24rtqgmdjh3OA3hrN1rCHj6HM8qA==",
++      "version": "9.2.5",
++      "resolved": "https://registry.npmjs.org/concurrently/-/concurrently-9.2.5.tgz",
++      "integrity": "sha512-YMZlvWrTPQEhjKp60XSmMGt60+pffbv6DyRnOMvVO98+J7aF8w8Ui9FhdcOwvSixc/kyR6SoVvmejcn/2lZBqg==",
+       "dev": true,
+       "license": "MIT",
+       "dependencies": {
+         "chalk": "4.1.2",
+         "rxjs": "7.8.2",
+-        "shell-quote": "1.9.0",
++        "shell-quote": "1.12.0",
+         "supports-color": "8.1.1",
+         "tree-kill": "1.2.2",
+         "yargs": "17.7.2"
+@@ -3162,9 +3162,9 @@
+       "license": "ISC"
+     },
+     "node_modules/ip-address": {
+-      "version": "10.7.0",
+-      "resolved": "https://registry.npmjs.org/ip-address/-/ip-address-10.7.0.tgz",
+-      "integrity": "sha512-BGFsyJd5mpXp3rK6jIdADLNgpJUK1jnjzvYF8lK+VyDab9JAmqN0YOKDdP17HlgKb2+ehPgDc8EtnRLbGCAMhA==",
++      "version": "10.7.6",
++      "resolved": "https://registry.npmjs.org/ip-address/-/ip-address-10.7.6.tgz",
++      "integrity": "sha512-00LYkM6byILa9eQIx6qoaXCM40xTLd56AZ4vyaPW3YTyb49VZYPo5xsiAq4tuQ54GH4R7gVdYScJ1B7B77PuTg==",
+       "license": "MIT",
+       "engines": {
+         "node": ">= 12"
+@@ -3455,9 +3455,9 @@
+       }
+     },
+     "node_modules/morgan": {
+-      "version": "1.12.0",
+-      "resolved": "https://registry.npmjs.org/morgan/-/morgan-1.12.0.tgz",
+-      "integrity": "sha512-OHpTRQwn2ezasILW8iKe+Yww1XsfWsZIpUOLF7RDb2g5GwO3trPaRwi7+8BDiJ7HFx2Kg2mfUdCBcVhwYlOz2g==",
++      "version": "1.12.1",
++      "resolved": "https://registry.npmjs.org/morgan/-/morgan-1.12.1.tgz",
++      "integrity": "sha512-tljKC0ex20AjO58Ob/eZ53JloycbVswbVNCHx6V6VLGzqt/w8dIynVGL0G8qVjNKwiA7sYSogCrN6QtJ82IV+g==",
+       "license": "MIT",
+       "dependencies": {
+         "basic-auth": "~2.0.1",
+@@ -3876,9 +3876,9 @@
+       }
+     },
+     "node_modules/proxy-addr": {
+-      "version": "2.0.7",
+-      "resolved": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.7.tgz",
+-      "integrity": "sha512-llQsMLSUDUPT44jdrU/O37qlnifitDP+ZwrmmZcoSKyLKvtZxpyV0n2/bD/N4tBAAZ/gJEdZU7KMraoK1+XYAg==",
++      "version": "2.0.8",
++      "resolved": "https://registry.npmjs.org/proxy-addr/-/proxy-addr-2.0.8.tgz",
++      "integrity": "sha512-5nnx0yGyVUcY6t9RnWcARWtwT9F1D8O9rt08htPvnd49W1IgZtmLkhu9WfMzQj1cFxjHIO6connUNVW5k7AVyQ==",
+       "license": "MIT",
+       "dependencies": {
+         "forwarded": "0.2.0",
+@@ -3886,6 +3886,10 @@
+       },
+       "engines": {
+         "node": ">= 0.10"
++      },
++      "funding": {
++        "type": "opencollective",
++        "url": "https://opencollective.com/express"
+       }
+     },
+     "node_modules/punycode": {
+@@ -3916,9 +3920,9 @@
+       "license": "MIT"
+     },
+     "node_modules/qs": {
+-      "version": "6.16.0",
+-      "resolved": "https://registry.npmjs.org/qs/-/qs-6.16.0.tgz",
+-      "integrity": "sha512-h6fhOIaRrID2CbEY2fqs+7t+UXZo+MLAnU5gRIq85uFtdiUPCdsApMlHhXogKVM4HM2DVbIjGNTTYH2OcmP1vA==",
++      "version": "6.17.1",
++      "resolved": "https://registry.npmjs.org/qs/-/qs-6.17.1.tgz",
++      "integrity": "sha512-jd3COkaKVgGUW+ZHyEHCG9bH7RoaaiWuMgzsIBjUMVjLAaWGWpoUAVwljVvBHxRu/2qEHnadLGZrkutYUBPQJA==",
+       "license": "BSD-3-Clause",
+       "dependencies": {
+         "es-define-property": "^1.0.1",
+@@ -4264,9 +4268,9 @@
+       }
+     },
+     "node_modules/shell-quote": {
+-      "version": "1.9.0",
+-      "resolved": "https://registry.npmjs.org/shell-quote/-/shell-quote-1.9.0.tgz",
+-      "integrity": "sha512-Iov+JwFv/2HcTpcwNMKd8+IWNb8tboQJNQTkAY/LLVK7gGH9jy+LGkVqPxfekHl+yMmiqXszdGWXgkfml7hjqA==",
++      "version": "1.12.0",
++      "resolved": "https://registry.npmjs.org/shell-quote/-/shell-quote-1.12.0.tgz",
++      "integrity": "sha512-PcByqNyT/38F2kDNi006HAMRJaULuBzq/FOsw3qdZvX/GA9W/jamDaRskgHjubHiftXK5sIFxLNkvrXUwcof6Q==",
+       "dev": true,
+       "license": "MIT",
+       "engines": {
+@@ -4364,9 +4368,9 @@
+       "license": "ISC"
+     },
+     "node_modules/source-map-js": {
+-      "version": "1.2.1",
+-      "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.1.tgz",
+-      "integrity": "sha512-UXWMKhLOwVKb728IUtQPXxfYU+usdybtUrK/8uGE8CQMvrhOpwvzDBwj0QhSL7MQc7vIsISBG8VQ8+IDQxpfQA==",
++      "version": "1.2.2",
++      "resolved": "https://registry.npmjs.org/source-map-js/-/source-map-js-1.2.2.tgz",
++      "integrity": "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw==",
+       "license": "BSD-3-Clause",
+       "engines": {
+         "node": ">=0.10.0"
+@@ -4664,9 +4668,9 @@
+       }
+     },
+     "node_modules/vite": {
+-      "version": "7.3.6",
+-      "resolved": "https://registry.npmjs.org/vite/-/vite-7.3.6.tgz",
+-      "integrity": "sha512-4XP60spRGjSZFf1qYH+dJIkK2znL3zQfl9KkOV9MkkRR/3Dls0dxaBsQPTloEc5BLXWPL9vsOxopxyKoMmDueg==",
++      "version": "7.3.8",
++      "resolved": "https://registry.npmjs.org/vite/-/vite-7.3.8.tgz",
++      "integrity": "sha512-3tTi78MAKhVk9h+YZVXMQ8POmneJuE97QUPAWtJghHzhH7BAyiqQOC2KZh1DWOsu/USB2cRXhznPByaabvYXfw==",
+       "license": "MIT",
+       "dependencies": {
+         "esbuild": "^0.27.0 || ^0.28.0",
+@@ -4966,9 +4970,9 @@
+       }
+     },
+     "node_modules/zod": {
+-      "version": "4.6.1",
+-      "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.1.tgz",
+-      "integrity": "sha512-341aRWQsve0rvronKNTqZpjmzdbUDlFuzHaI/XLg/Ej82qffDJRRfBTCuv7+9q/rMjB6LSLyEBnW4InJeMtt/Q==",
++      "version": "4.6.7",
++      "resolved": "https://registry.npmjs.org/zod/-/zod-4.6.7.tgz",
++      "integrity": "sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==",
+       "license": "MIT",
+       "funding": {
+         "url": "https://github.com/sponsors/colinhacks"

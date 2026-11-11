@@ -1,0 +1,250 @@
+
+> shopsmart-starter@1.0.0 check
+> npm run lint --workspace frontend && npm run lint --workspace backend && npm run test && npm run build
+
+
+> shopsmart-frontend@1.0.0 lint
+> eslint .
+
+
+> shopsmart-backend@1.0.0 lint
+> eslint .
+
+
+> shopsmart-starter@1.0.0 test
+> npm run test --workspace frontend && npm run test --workspace backend
+
+
+> shopsmart-frontend@1.0.0 test
+> vitest run
+
+
+ RUN  v3.2.7 /home/claude/work/ShopSmart/frontend
+
+ ✓ src/utils/cart.test.js (4 tests) 3ms
+
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  21:18:09
+   Duration  262ms (transform 32ms, setup 0ms, collect 19ms, tests 3ms, environment 0ms, prepare 79ms)
+
+
+> shopsmart-backend@1.0.0 test
+> node --test
+
+TAP version 13
+# Subtest: parseBudget extracts a peso budget
+ok 1 - parseBudget extracts a peso budget
+  ---
+  duration_ms: 2.753241
+  type: 'test'
+  ...
+# Subtest: parseBudget understands PHP and pesos
+ok 2 - parseBudget understands PHP and pesos
+  ---
+  duration_ms: 0.339715
+  type: 'test'
+  ...
+# Subtest: parseBudget ignores numbers that are not prices
+ok 3 - parseBudget ignores numbers that are not prices
+  ---
+  duration_ms: 0.090955
+  type: 'test'
+  ...
+# Subtest: rankProducts respects the budget
+ok 4 - rankProducts respects the budget
+  ---
+  duration_ms: 0.894645
+  type: 'test'
+  ...
+# Subtest: assistant response contains traceable sources
+ok 5 - assistant response contains traceable sources
+  ---
+  duration_ms: 29.804373
+  type: 'test'
+  ...
+# Subtest: keyboard below ₱2,000 selects only the seeded keyboard
+ok 6 - keyboard below ₱2,000 selects only the seeded keyboard
+  ---
+  duration_ms: 0.546897
+  type: 'test'
+  ...
+# Subtest: a category absent from the catalog selects nothing
+ok 7 - a category absent from the catalog selects nothing
+  ---
+  duration_ms: 0.339257
+  type: 'test'
+  ...
+# Subtest: a budget below every price selects nothing
+ok 8 - a budget below every price selects nothing
+  ---
+  duration_ms: 0.119894
+  type: 'test'
+  ...
+# Subtest: out-of-stock and inactive products are never selected
+ok 9 - out-of-stock and inactive products are never selected
+  ---
+  duration_ms: 0.438754
+  type: 'test'
+  ...
+# Subtest: toCatalogFact sends only public fields with a numeric price
+ok 10 - toCatalogFact sends only public fields with a numeric price
+  ---
+  duration_ms: 0.399999
+  type: 'test'
+  ...
+# Subtest: test/fixtures/catalog.js
+ok 2 - test/fixtures/catalog.js
+  ---
+  duration_ms: 28.213522
+  type: 'test'
+  ...
+# Subtest: a supported AI draft is returned with catalog-built products and sources
+ok 12 - a supported AI draft is returned with catalog-built products and sources
+  ---
+  duration_ms: 3.083728
+  type: 'test'
+  ...
+# Subtest: no match: provider is NOT called and nothing is invented
+ok 13 - no match: provider is NOT called and nothing is invented
+  ---
+  duration_ms: 0.547229
+  type: 'test'
+  ...
+# Subtest: an invented product id is rejected and the rule fallback is used
+ok 14 - an invented product id is rejected and the rule fallback is used
+  ---
+  duration_ms: 13.939886
+  type: 'test'
+  ...
+# Subtest: an unsupported price claim is rejected
+ok 15 - an unsupported price claim is rejected
+  ---
+  duration_ms: 0.152467
+  type: 'test'
+  ...
+# Subtest: an invented specification number is rejected
+ok 16 - an invented specification number is rejected
+  ---
+  duration_ms: 0.311852
+  type: 'test'
+  ...
+# Subtest: an unsupported availability claim is rejected
+ok 17 - an unsupported availability claim is rejected
+  ---
+  duration_ms: 0.205795
+  type: 'test'
+  ...
+# Subtest: malformed provider output is rejected
+ok 18 - malformed provider output is rejected
+  ---
+  duration_ms: 0.14124
+  type: 'test'
+  ...
+# Subtest: provider timeout falls back to a useful rule-based answer
+ok 19 - provider timeout falls back to a useful rule-based answer
+  ---
+  duration_ms: 0.399407
+  type: 'test'
+  ...
+# Subtest: provider rate_limited falls back to a useful rule-based answer
+ok 20 - provider rate_limited falls back to a useful rule-based answer
+  ---
+  duration_ms: 0.383454
+  type: 'test'
+  ...
+# Subtest: provider unavailable falls back to a useful rule-based answer
+ok 21 - provider unavailable falls back to a useful rule-based answer
+  ---
+  duration_ms: 0.411044
+  type: 'test'
+  ...
+# Subtest: provider invalid_format falls back to a useful rule-based answer
+ok 22 - provider invalid_format falls back to a useful rule-based answer
+  ---
+  duration_ms: 0.300619
+  type: 'test'
+  ...
+# Subtest: provider not_configured falls back to a useful rule-based answer
+ok 23 - provider not_configured falls back to a useful rule-based answer
+  ---
+  duration_ms: 0.295123
+  type: 'test'
+  ...
+# Subtest: requestGeminiDraft maps HTTP 429 to rate_limited and never echoes the key
+ok 24 - requestGeminiDraft maps HTTP 429 to rate_limited and never echoes the key
+  ---
+  duration_ms: 19.384116
+  type: 'test'
+  ...
+# Subtest: requestGeminiDraft maps a network failure to unavailable
+ok 25 - requestGeminiDraft maps a network failure to unavailable
+  ---
+  duration_ms: 0.297875
+  type: 'test'
+  ...
+# Subtest: requestGeminiDraft without a key reports not_configured
+ok 26 - requestGeminiDraft without a key reports not_configured
+  ---
+  duration_ms: 0.161469
+  type: 'test'
+  ...
+# Subtest: requestGeminiDraft parses a Gemini JSON reply
+ok 27 - requestGeminiDraft parses a Gemini JSON reply
+  ---
+  duration_ms: 0.473365
+  type: 'test'
+  ...
+# Subtest: Gemini 3 requests ask for a low thinking level; other models do not
+ok 28 - Gemini 3 requests ask for a low thinking level; other models do not
+  ---
+  duration_ms: 0.191169
+  type: 'test'
+  ...
+# Subtest: a valid classroom order passes validation
+ok 29 - a valid classroom order passes validation
+  ---
+  duration_ms: 2.779779
+  type: 'test'
+  ...
+# Subtest: duplicate products fail order validation
+ok 30 - duplicate products fail order validation
+  ---
+  duration_ms: 0.347484
+  type: 'test'
+  ...
+# Subtest: an oversized assistant question fails validation
+ok 31 - an oversized assistant question fails validation
+  ---
+  duration_ms: 0.428873
+  type: 'test'
+  ...
+1..31
+# tests 31
+# suites 0
+# pass 31
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 366.08533
+
+> shopsmart-starter@1.0.0 build
+> npm run build --workspace frontend
+
+
+> shopsmart-frontend@1.0.0 build
+> vite build
+
+vite v7.3.6 building client environment for production...
+transforming...
+../node_modules/react-router/dist/development/index.mjs (11:0): Module level directives cause errors when bundled, "use client" in "../node_modules/react-router/dist/development/index.mjs" was ignored.
+../node_modules/react-router/dist/development/dom-export.mjs (1:0): Module level directives cause errors when bundled, "use client" in "../node_modules/react-router/dist/development/dom-export.mjs" was ignored.
+✓ 47 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                   0.49 kB │ gzip:  0.30 kB
+dist/assets/index-BZDrHeDi.css    4.67 kB │ gzip:  1.57 kB
+dist/assets/index-f5yIIzvJ.js   275.33 kB │ gzip: 87.01 kB
+✓ built in 1.74s
+EXIT=0
