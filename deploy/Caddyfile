@@ -1,0 +1,17 @@
+# ShopSmart web entry point (Caddy). Caddy gets and renews a free HTTPS certificate automatically.
+# Public ports: 80 (redirects to HTTPS) and 443. The Express API on port 3000 and PostgreSQL on 5432 stay internal.
+{$SHOPSMART_DOMAIN} {
+	encode gzip
+
+	# API requests go to Express on the same machine.
+	handle /api/* {
+		reverse_proxy 127.0.0.1:3000
+	}
+
+	# Everything else is the built React app. Unknown paths (like /orders/12 on refresh) get index.html.
+	handle {
+		root * /var/www/shopsmart
+		try_files {path} /index.html
+		file_server
+	}
+}

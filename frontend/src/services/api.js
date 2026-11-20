@@ -10,6 +10,7 @@ export async function request(path, options = {}, { timeoutMs = REQUEST_TIMEOUT_
   try {
     response = await fetch(`${API_URL}${path}`, {
       ...options,
+      credentials: 'include', // send the httpOnly sign-in cookie with every request
       signal: options.signal ?? AbortSignal.timeout(timeoutMs),
       headers: { 'Content-Type': 'application/json', ...options.headers }
     });
@@ -22,6 +23,7 @@ export async function request(path, options = {}, { timeoutMs = REQUEST_TIMEOUT_
     throw new Error('ShopSmart could not reach the server. Check that the API is running and try again.');
   }
 
+  if (response.status === 204) return null;
   const data = await response.json().catch(() => null);
   if (!response.ok) {
     const message = data?.error?.message || `Request failed with status ${response.status}.`;
@@ -36,6 +38,12 @@ export async function request(path, options = {}, { timeoutMs = REQUEST_TIMEOUT_
 export const api = {
   getProducts: (query = '') => request(`/products${query ? `?search=${encodeURIComponent(query)}` : ''}`),
   getProduct: (id) => request(`/products/${id}`),
+  me: () => request('/auth/me'),
+  register: (account) => request('/auth/register', { method: 'POST', body: JSON.stringify(account) }),
+  login: (credentials) => request('/auth/login', { method: 'POST', body: JSON.stringify(credentials) }),
+  logout: () => request('/auth/logout', { method: 'POST' }),
+  getMyOrders: () => request('/orders'),
+  getOrder: (id) => request(`/orders/${id}`),
   // A timed-out order may still have been saved, so the message tells the customer not to resubmit blindly.
   createOrder: (order) => request('/orders', { method: 'POST', body: JSON.stringify(order) }, {
     timeoutMessage: 'The server took too long to confirm your order. It may still have been placed, so please wait a moment before trying again.'

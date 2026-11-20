@@ -334,6 +334,18 @@ Confirm that the front end uses http://localhost:5173 and that `FRONTEND_URL=htt
 
 Read `docs/TEACHING_ROADMAP.md` for the weekly improvement plan.
 
+## Customer accounts
+
+Customers create an account (name, email, password) on the **Sign in** page. Checkout and **My orders** need a signed-in customer, and the API only returns orders to the customer who placed them (a guest gets 401, another customer gets 404). Use made-up test details only.
+
+For local development no extra setting is needed. On a server, set `SESSION_SECRET` in `backend/.env` (see `backend/.env.example`).
+
+After pulling this version, run `npm run db:migrate` once locally to add the User table. Your existing products and orders are kept.
+
+## Deploying to AWS
+
+See `docs/AWS_DEPLOYMENT.md` for the single-EC2, HTTPS deployment (decision record, step-by-step commands, hosted checks and cleanup). Server files are in `deploy/`.
+
 ## Release documents (Week 6 quality and deployment challenge)
 
 - `docs/RELEASE_NOTE.md`: what works, known limitations, deployment status, team record

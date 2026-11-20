@@ -1,8 +1,9 @@
 import React from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import StatusMessage from '../components/StatusMessage.jsx';
 import { useCart } from '../context/CartContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 import { api } from '../services/api.js';
 
 export default function CheckoutPage() {
@@ -11,6 +12,12 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [order, setOrder] = useState(null);
+  const { user, checking } = useAuth();
+
+  // Fill in the signed-in customer's name and email (they can still change them).
+  useEffect(() => {
+    if (user) setForm((current) => ({ ...current, customerName: current.customerName || user.name, email: current.email || user.email }));
+  }, [user]);
 
   function updateField(event) {
     setForm((current) => ({ ...current, [event.target.name]: event.target.value }));
@@ -40,8 +47,18 @@ export default function CheckoutPage() {
       <h1>Thank you, {order.customerName}!</h1>
       <p>Your simulated order number is <strong>#{order.id}</strong>.</p>
       <p>Total: <strong>₱{Number(order.total).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</strong></p>
-      <Link className="button" to="/">Continue shopping</Link>
+      <p><Link className="button" to={`/orders/${order.id}`}>View this order</Link></p>
+      <Link to="/">Continue shopping</Link>
     </section>
+  );
+
+  if (checking) return <section><StatusMessage>Checking your account…</StatusMessage></section>;
+  if (!user) return (
+    <section><div className="empty-state">
+      <h1>Sign in to check out</h1>
+      <p>Your cart is kept. Sign in or create a test account, then you will come back here.</p>
+      <Link className="button" to="/account?next=/checkout">Sign in or create an account</Link>
+    </div></section>
   );
 
   if (cart.length === 0) return <section><div className="empty-state"><h1>Your cart is empty</h1><Link className="button" to="/">Browse products</Link></div></section>;

@@ -1,0 +1,34 @@
+## guest: GET /orders, GET /orders/1, POST /orders, GET /auth/me
+{"error":{"code":"AUTH_REQUIRED","message":"Please sign in first."}} 401
+{"error":{"code":"AUTH_REQUIRED","message":"Please sign in first."}} 401
+{"error":{"code":"AUTH_REQUIRED","message":"Please sign in first."}} 401
+{"error":{"code":"AUTH_REQUIRED","message":"Please sign in first."}} 401
+## register Ana Test (fictional)
+{"user":{"id":1,"name":"Ana Test","email":"ana.test@example.com"}} 201
+## cookie flags:
+Set-Cookie: shopsmart_session=<redacted>; Max-Age=604800; Path=/; Expires=Fri, 27 Nov 2026 12:39:27 GMT; HttpOnly; SameSite=Lax
+## register Ben Test (fictional)
+{"user":{"id":2,"name":"Ben Test","email":"ben.test@example.com"}} 201
+## duplicate email
+{"error":{"code":"EMAIL_TAKEN","message":"An account with this email already exists. Please sign in."}} 409
+## wrong password / unknown email
+{"error":{"code":"INVALID_LOGIN","message":"Email or password is incorrect."}} 401
+{"error":{"code":"INVALID_LOGIN","message":"Email or password is incorrect."}} 401
+## Ana places an order
+{"id":10,"customerName":"Ana Test","email":"ana.test@example.com","address":"12 Sample Street, Test City","status":"PENDING","total":650,"createdAt":"2026-11-20T12:39:27.279Z","items":[{"productId":1,"name":"Wireless Mouse","quantity":1,"unitPrice":650}]}
+## Ana reads her order #10 (owner)
+{"id":10,"customerName":"Ana Test","email":"ana.test@example.com","address":"12 Sample Street, Test City","status":"PENDING","total":650,"createdAt":"2026-11-20T12:39:27.279Z","items":[{"productId":1,"name":"Wireless Mouse","quantity":1,"unitPrice":650}]} 200
+## Ana lists her orders
+[10]
+## Ben reads Ana's order #10 (other customer)
+{"error":{"code":"ORDER_NOT_FOUND","message":"Order could not be found."}} 404
+## Ben lists his orders
+{"orders":[]} 200
+## Ana reads an old order with no owner (#1)
+{"error":{"code":"ORDER_NOT_FOUND","message":"Order could not be found."}} 404
+## Ana signs out, then tries again
+ 204
+{"error":{"code":"AUTH_REQUIRED","message":"Please sign in first."}} 401
+## password stored as hash
+ana.test@example.com|scrypt$
+ben.test@example.com|scrypt$

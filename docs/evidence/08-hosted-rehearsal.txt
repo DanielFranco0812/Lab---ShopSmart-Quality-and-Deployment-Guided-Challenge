@@ -1,0 +1,12 @@
+{"case": "home loads", "cards": 6}
+{"case": "guest checkout", "heading": "Sign in to check out"}
+{"case": "after sign-up back at checkout", "url": "https://localhost:8443/checkout", "prefilled": ["Ana Test", "ana78553@example.com"], "cart": "Cart (1)"}
+{"case": "order placed", "confirmation": "ORDER RECEIVED |  | Thank you, Ana Test! |  | Your simulated order number is #11. |  | Total: ₱900.00 |  | View this order |  | Continue shopping"}
+{"case": "owner refreshes order page (direct route)", "url": "https://localhost:8443/orders/11", "text": "ORDER #11 · PENDING |  | ₱900.00 |  | Ana Test · 12 Sample Street, Test City |  | 1 × USB-C Study Lamp — ₱900.00 | Back to my orders"}
+{"case": "my orders", "rows": ["Order #11"]}
+{"case": "other customer opens Ana's order", "message": "Order could not be found."}
+{"case": "other customer direct API request", "status": 404, "body": "{\"error\":{\"code\":\"ORDER_NOT_FOUND\",\"message\":\"Order could not be found.\"}}"}
+{"case": "guest opens order page", "url": "https://localhost:8443/account?next=/orders/11", "heading": "Sign in"}
+{"case": "guest direct API request", "status": 401, "body": "{\"error\":{\"code\":\"AUTH_REQUIRED\",\"message\":\"Please sign in first.\"}}"}
+{"case": "after sign out, order page", "url": "https://localhost:8443/account?next=/orders/11", "heading": "Sign in"}
+{"case": "assistant", "answer": "The best match in the current ShopSmart catalog is Compact Mechanical Keyboard (₱1,850.00, 8 in stock).", "notice": ["AI drafting is not configured, so this answer was built directly from catalog rules."]}

@@ -7,17 +7,23 @@ import { prisma } from './lib/prisma.js';
 import productsRouter from './routes/products.js';
 import ordersRouter from './routes/orders.js';
 import assistantRouter from './routes/assistant.js';
+import authRouter from './routes/auth.js';
+import { loadSession } from './middleware/session.js';
 
 const checkDatabaseConnection = () => prisma.$queryRaw`SELECT 1`;
 
 export function createApp({ checkDatabase = checkDatabaseConnection } = {}) {
   const app = express();
   app.disable('x-powered-by');
+  // Behind a web server such as Caddy or nginx, TRUST_PROXY=1 lets Express see each visitor's real IP
+  // (needed for per-visitor rate limits) and know the original request was HTTPS.
+  if (process.env.TRUST_PROXY) app.set('trust proxy', Number.isNaN(Number(process.env.TRUST_PROXY)) ? process.env.TRUST_PROXY : Number(process.env.TRUST_PROXY));
   app.use(helmet());
-  app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173' }));
+  app.use(cors({ origin: process.env.FRONTEND_URL || 'http://localhost:5173', credentials: true }));
   // Request id first, so even a malformed-JSON error carries a traceId.
   app.use((request, response, next) => { request.id = crypto.randomUUID(); response.setHeader('X-Request-ID', request.id); next(); });
   app.use(express.json({ limit: '100kb' }));
+  app.use(loadSession);
   app.use(morgan(':method :url :status :response-time ms'));
 
   // DEF-2 fix: health only reports ok when PostgreSQL answers, so a deployment check cannot pass with a dead database.
@@ -30,6 +36,7 @@ export function createApp({ checkDatabase = checkDatabaseConnection } = {}) {
       response.status(503).json({ status: 'error', database: 'unreachable' });
     }
   });
+  app.use('/api/auth', authRouter);
   app.use('/api/products', productsRouter);
   app.use('/api/orders', ordersRouter);
   app.use('/api/assistant', assistantRouter);

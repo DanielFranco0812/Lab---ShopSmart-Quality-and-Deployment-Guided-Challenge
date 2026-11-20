@@ -23,6 +23,18 @@ describe('api request timeout (DEF-1)', () => {
     expect(fetchSpy.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
   });
 
+  it('sends the sign-in cookie with every request', async () => {
+    const fetchSpy = vi.fn(async () => new Response('{"user":null}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchSpy);
+    await request('/auth/me');
+    expect(fetchSpy.mock.calls[0][1].credentials).toBe('include');
+  });
+
+  it('treats an empty 204 reply (sign out) as success', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(null, { status: 204 })));
+    await expect(request('/auth/logout', { method: 'POST' })).resolves.toBeNull();
+  });
+
   it('can use an operation-specific timeout message', async () => {
     vi.stubGlobal('fetch', vi.fn(hangingFetch));
     await expect(request('/orders', { method: 'POST' }, { timeoutMs: 50, timeoutMessage: 'Order timed out.' }))
